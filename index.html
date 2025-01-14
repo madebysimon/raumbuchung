@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3Forms Submission</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: auto;
+        }
+
+        form input, form textarea, form button {
+            display: block;
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        form button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background-color: #0056b3;
+        }
+
+        #qr-reader {
+            margin: 20px auto;
+            text-align: center;
+            display: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .instructions {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web3Forms Submission</h1>
+    <form id="web3form" action="https://api.web3forms.com/submit" method="POST">
+        <!-- Access Key -->
+        <input type="hidden" name="access_key" id="access_key" value="">
+
+        <!-- Form Inputs -->
+        <label for="patientID">Patient ID</label>
+        <input type="text" name="patientID" id="patientID" required>
+
+        <label for="message">Message (or ID)</label>
+        <textarea name="message" id="message" required></textarea>
+
+        <!-- Honeypot Spam Protection -->
+        <input type="checkbox" name="botcheck" class="hidden">
+
+        <button type="submit">Submit Form</button>
+    </form>
+
+    <!-- QR Reader -->
+    <div id="qr-reader">
+        <p class="instructions" id="qr-instructions">Scan the QR code for the ID</p>
+        <div id="qr-reader-container"></div>
+        <button id="next-scan" class="hidden">Next Step: Scan Access Key</button>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script>
+        // Get elements
+        const accessKeyInput = document.getElementById('access_key');
+        const messageInput = document.getElementById('message');
+        const qrReaderContainer = document.getElementById('qr-reader');
+        const qrInstructions = document.getElementById('qr-instructions');
+        const nextScanButton = document.getElementById('next-scan');
+        const form = document.getElementById('web3form');
+
+        // Initialize variables
+        let currentStep = 1; // Step 1: Scan for ID, Step 2: Scan for access key
+        let qrCodeReader;
+
+        // Initialize QR Code Scanner
+        function startScanner() {
+            qrReaderContainer.style.display = 'block';
+            qrCodeReader = new Html5Qrcode("qr-reader-container");
+
+            qrCodeReader.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: 250
+                },
+                (decodedText) => {
+                    handleQRCode(decodedText);
+                },
+                (errorMessage) => {
+                    console.warn(errorMessage);
+                }
+            ).catch(console.error);
+        }
+
+        function handleQRCode(decodedText) {
+            if (currentStep === 1) {
+                // Step 1: Populate the message field with scanned data
+                messageInput.value = decodedText;
+                qrInstructions.textContent = "Step 1 complete: ID scanned. Proceed to scan the Access Key.";
+                nextScanButton.classList.remove('hidden');
+                qrCodeReader.stop().catch(console.error);
+            } else if (currentStep === 2) {
+                // Step 2: Populate the access_key field with scanned data
+                accessKeyInput.value = decodedText;
+                qrInstructions.textContent = "Step 2 complete: Access Key scanned. You can now submit the form.";
+                qrReaderContainer.style.display = 'none';
+                qrCodeReader.stop().catch(console.error);
+            }
+        }
+
+        // Handle "Next Step" button click
+        nextScanButton.addEventListener('click', () => {
+            currentStep = 2;
+            nextScanButton.classList.add('hidden');
+            qrInstructions.textContent = "Scan the QR code for the Access Key";
+            qrCodeReader.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: 250
+                },
+                (decodedText) => {
+                    handleQRCode(decodedText);
+                },
+                (errorMessage) => {
+                    console.warn(errorMessage);
+                }
+            ).catch(console.error);
+        });
+
+        // Start scanner on page load
+        startScanner();
+    </script>
+</body>
+</html>
